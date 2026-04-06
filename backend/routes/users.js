@@ -29,7 +29,7 @@ router.get('/:id', async (req, res) => {
 // Update user skills
 router.put('/:id/skills', async (req, res) => {
   try {
-    const { skillsTeach, skillsLearn, bio, githubLink } = req.body;
+    const { skillsTeach, skillsLearn, bio, githubLink, linkedInLink, technicalDomains, pastProjects } = req.body;
     
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -40,6 +40,9 @@ router.put('/:id/skills', async (req, res) => {
     if (skillsLearn) user.skillsLearn = skillsLearn;
     if (bio !== undefined) user.bio = bio;
     if (githubLink !== undefined) user.githubLink = githubLink;
+    if (linkedInLink !== undefined) user.linkedInLink = linkedInLink;
+    if (technicalDomains) user.technicalDomains = technicalDomains;
+    if (pastProjects) user.pastProjects = pastProjects;
 
     await user.save();
     res.json(user);

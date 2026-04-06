@@ -227,6 +227,13 @@ function Dashboard({ user, onUpdateUser }) {
                     {u.skillsLearn?.length ? u.skillsLearn.map(s => <span key={s} className="skill-tag learn">{s}</span>) : <span style={{fontSize:'0.8rem',color:'#6b7280'}}>None</span>}
                   </div>
                 </div>
+                
+                <div className="user-section">
+                  <h5>Technical Domains:</h5>
+                  <div className="skill-list" style={{marginBottom:0}}>
+                    {u.technicalDomains?.length ? u.technicalDomains.map(d => <span key={d} className="skill-tag" style={{backgroundColor: '#eef2ff', color: '#3730a3'}}>{d}</span>) : <span style={{fontSize:'0.8rem',color:'#6b7280'}}>None</span>}
+                  </div>
+                </div>
 
                 <button 
                   className="btn-primary" 

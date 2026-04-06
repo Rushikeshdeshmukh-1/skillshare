@@ -6,6 +6,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const requestRoutes = require('./routes/requests');
+const teamRoutes = require('./routes/teams');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,30 +16,17 @@ app.use(cors());
 app.use(express.json());
 
 // Main DB Connection
-const connectDB = async () => {
-  try {
-    if (process.env.MONGODB_URI) {
-      await mongoose.connect(process.env.MONGODB_URI);
-      console.log('Connected to external MongoDB');
-    } else {
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      console.log('No MONGODB_URI found, starting in-memory DB...');
-      const mongoServer = await MongoMemoryServer.create();
-      const mongoUri = mongoServer.getUri();
-      await mongoose.connect(mongoUri);
-      console.log('Connected to In-Memory MongoDB at', mongoUri);
-    }
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-  }
-};
-
-connectDB();
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/skillswap').then(() => {
+  console.log('Connected to permanent Local MongoDB at mongodb://127.0.0.1:27017/skillswap');
+}).catch((err) => {
+  console.error('MongoDB connection error:', err);
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/teams', teamRoutes);
 
 app.get('/', (req, res) => {
   res.send('SkillSwap API is running');

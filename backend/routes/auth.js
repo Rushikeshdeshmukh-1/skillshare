@@ -28,13 +28,9 @@ router.post('/register', async (req, res) => {
     await newUser.save();
     
     // Return user info
-    res.status(201).json({ 
-      _id: newUser._id, 
-      name: newUser.name, 
-      email: newUser.email,
-      skillsTeach: newUser.skillsTeach,
-      skillsLearn: newUser.skillsLearn
-    });
+    const userToReturn = newUser.toObject();
+    delete userToReturn.password;
+    res.status(201).json(userToReturn);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -57,13 +53,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    res.json({
-      _id: user._id, 
-      name: user.name, 
-      email: user.email,
-      skillsTeach: user.skillsTeach,
-      skillsLearn: user.skillsLearn
-    });
+    const userToReturn = user.toObject();
+    delete userToReturn.password;
+    res.json(userToReturn);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
