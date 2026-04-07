@@ -7,8 +7,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const posts = await TeamPost.find()
-      .populate('author', 'name email technicalDomains')
-      .populate('applicants.user', 'name email technicalDomains')
+      .populate('author', 'name email technicalDomains githubLink linkedInLink')
+      .populate('applicants.user', 'name email technicalDomains githubLink linkedInLink')
       .sort({ createdAt: -1 });
     res.json(posts);
   } catch (error) {
@@ -87,6 +87,24 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Team post not found' });
     }
     res.json({ message: 'Post deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Withdraw application
+router.delete('/:id/applicants/:userId', async (req, res) => {
+  try {
+    const post = await TeamPost.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Team post not found' });
+    }
+
+    const { userId } = req.params;
+    post.applicants = post.applicants.filter(a => a.user.toString() !== userId && (!a.user._id || a.user._id.toString() !== userId));
+    await post.save();
+    
+    res.json(post);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

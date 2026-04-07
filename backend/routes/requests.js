@@ -37,8 +37,8 @@ router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
-    const received = await SwapRequest.find({ receiver: userId }).populate('sender', 'name email skillsTeach');
-    const sent = await SwapRequest.find({ sender: userId }).populate('receiver', 'name email skillsLearn');
+    const received = await SwapRequest.find({ receiver: userId }).populate('sender', 'name email skillsTeach githubLink linkedInLink');
+    const sent = await SwapRequest.find({ sender: userId }).populate('receiver', 'name email skillsLearn githubLink linkedInLink');
     
     res.json({ received, sent });
   } catch (error) {
@@ -64,6 +64,19 @@ router.put('/:id', async (req, res) => {
     await request.save();
 
     res.json(request);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete or Cancel a request
+router.delete('/:id', async (req, res) => {
+  try {
+    const request = await SwapRequest.findByIdAndDelete(req.params.id);
+    if (!request) {
+      return res.status(404).json({ message: 'Request not found' });
+    }
+    res.json({ message: 'Request deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

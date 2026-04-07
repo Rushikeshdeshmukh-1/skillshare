@@ -84,6 +84,16 @@ function TeamBuilder({ user }) {
     }
   };
 
+  const handleWithdrawApplication = async (postId) => {
+    if (!window.confirm("Are you sure you want to withdraw your application?")) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/teams/${postId}/applicants/${user._id}`, { method: 'DELETE' });
+      if (res.ok) fetchPosts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleApplicantStatus = async (postId, applicantId, status) => {
     try {
       const res = await fetch(`http://localhost:5000/api/teams/${postId}/applicants/${applicantId}`, {
@@ -96,6 +106,17 @@ function TeamBuilder({ user }) {
       console.error(err);
     }
   };
+
+  const ContactCard = ({ person }) => (
+    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#ecfdf5', borderRadius: '4px', border: '1px solid #6ee7b7' }}>
+      <p style={{ margin: 0, fontSize: '0.85rem', color: '#047857' }}><strong>Contact Unlocked:</strong></p>
+      <ul style={{ margin: '0.5rem 0 0 1rem', padding: 0, fontSize: '0.85rem', color: '#065f46' }}>
+        <li>Email: <a href={`mailto:${person.email}`}>{person.email}</a></li>
+        {person.linkedInLink && <li><a href={person.linkedInLink} target="_blank" rel="noreferrer">LinkedIn Profile</a></li>}
+        {person.githubLink && <li><a href={person.githubLink} target="_blank" rel="noreferrer">GitHub Profile</a></li>}
+      </ul>
+    </div>
+  );
 
   return (
     <div className="team-builder-container">
@@ -133,7 +154,7 @@ function TeamBuilder({ user }) {
       <div className="posts-grid">
         {posts.map(post => {
           const isAuthor = post.author._id === user._id;
-          const userApplication = !isAuthor ? post.applicants.find(a => a.user._id === user._id) : null;
+          const userApplication = !isAuthor ? post.applicants.find(a => (!a.user._id && a.user === user._id) || (a.user._id === user._id)) : null;
           
           return (
             <div key={post._id} className="panel post-card animate-fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -179,9 +200,19 @@ function TeamBuilder({ user }) {
               )}
               
               {!isAuthor && userApplication && (
-                <div className={`status-banner status-${userApplication.status}`}>
-                  <span>Application Status: <strong>{userApplication.status.toUpperCase()}</strong></span>
-                  <span style={{ display: 'block', fontSize: '0.8rem', marginTop: '0.2rem' }}>Role: {userApplication.role}</span>
+                <div style={{ marginTop: 'auto', borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
+                  <div className={`status-banner status-${userApplication.status}`}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '0.9rem' }}>Application Status: <strong>{userApplication.status.toUpperCase()}</strong></span>
+                      {(userApplication.status === 'pending' || userApplication.status === 'rejected') && (
+                        <button className="btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => handleWithdrawApplication(post._id)}>Withdraw</button>
+                      )}
+                    </div>
+                    <span style={{ display: 'block', fontSize: '0.8rem', marginTop: '0.2rem' }}>Role: {userApplication.role}</span>
+                  </div>
+                  {userApplication.status === 'accepted' && post.author && (
+                    <ContactCard person={post.author} />
+                  )}
                 </div>
               )}
 
@@ -208,6 +239,9 @@ function TeamBuilder({ user }) {
                             <button className="btn-success" style={{ flex: 1, padding: '0.4rem', fontSize: '0.85rem' }} onClick={() => handleApplicantStatus(post._id, a.user._id, 'accepted')}>Accept</button>
                             <button className="btn-danger" style={{ flex: 1, padding: '0.4rem', fontSize: '0.85rem' }} onClick={() => handleApplicantStatus(post._id, a.user._id, 'rejected')}>Reject</button>
                           </div>
+                        )}
+                        {a.status === 'accepted' && a.user && (
+                          <ContactCard person={a.user} />
                         )}
                       </div>
                     ))}

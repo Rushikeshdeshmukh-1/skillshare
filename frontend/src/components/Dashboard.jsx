@@ -40,9 +40,7 @@ function Dashboard({ user, onUpdateUser }) {
     const value = type === 'teach' ? newTeach : newLearn;
     const key = type === 'teach' ? 'skillsTeach' : 'skillsLearn';
     if (!value.trim()) return;
-
     if (user[key].includes(value)) return;
-
     const updatedSkills = [...user[key], value.trim()];
     
     try {
@@ -112,7 +110,18 @@ function Dashboard({ user, onUpdateUser }) {
     }
   };
 
-  // Safely filter users: default to empty array if u.skillsTeach is undefined.
+  // Cancel/Delete request
+  const cancelRequest = async (requestId) => {
+    if (!window.confirm("Are you sure you want to cancel this request?")) return;
+    try {
+      await fetch(`http://localhost:5000/api/requests/${requestId}`, { method: 'DELETE' });
+      fetchRequests();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Safely filter users
   const filteredUsers = users.filter(u => {
     if (!search) return true;
     const term = search.toLowerCase();
@@ -121,32 +130,39 @@ function Dashboard({ user, onUpdateUser }) {
     return teachWords.includes(term) || learnWords.includes(term) || u.name.toLowerCase().includes(term);
   });
 
+  const ContactCard = ({ person }) => (
+    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#ecfdf5', borderRadius: '4px', border: '1px solid #6ee7b7' }}>
+      <p style={{ margin: 0, fontSize: '0.85rem', color: '#047857' }}><strong>Contact Unlocked:</strong></p>
+      <ul style={{ margin: '0.5rem 0 0 1rem', padding: 0, fontSize: '0.85rem', color: '#065f46' }}>
+        <li>Email: <a href={`mailto:${person.email}`}>{person.email}</a></li>
+        {person.linkedInLink && <li><a href={person.linkedInLink} target="_blank" rel="noreferrer">LinkedIn Profile</a></li>}
+        {person.githubLink && <li><a href={person.githubLink} target="_blank" rel="noreferrer">GitHub Profile</a></li>}
+      </ul>
+    </div>
+  );
+
   return (
-    <div className="dashboard">
+    <div className="dashboard animate-fade-in">
       <div className="sidebar">
         <div className="panel">
           <h3>My Profile</h3>
           <p style={{marginBottom:'1rem'}}><strong>{user.name}</strong> ({user.email})</p>
           
           <h4>I can teach:</h4>
-          <div className="skill-list">
+          <div className="skill-list" style={{ marginTop: '0.5rem' }}>
             {user.skillsTeach && user.skillsTeach.map(s => (
               <span key={s} className="skill-tag">
                 {s} <button onClick={() => handleRemoveSkill('teach', s)}>×</button>
               </span>
             ))}
           </div>
-          <div className="add-skill" style={{marginBottom:'1rem'}}>
-            <input 
-              value={newTeach} 
-              onChange={e => setNewTeach(e.target.value)} 
-              placeholder="e.g. React" 
-            />
+          <div className="add-skill" style={{marginBottom:'1.5rem'}}>
+            <input value={newTeach} onChange={e => setNewTeach(e.target.value)} placeholder="e.g. React" />
             <button className="btn-secondary" onClick={() => handleAddSkill('teach')}>Add</button>
           </div>
 
           <h4>I want to learn:</h4>
-          <div className="skill-list">
+          <div className="skill-list" style={{ marginTop: '0.5rem' }}>
             {user.skillsLearn && user.skillsLearn.map(s => (
               <span key={s} className="skill-tag learn">
                 {s} <button onClick={() => handleRemoveSkill('learn', s)}>×</button>
@@ -154,30 +170,29 @@ function Dashboard({ user, onUpdateUser }) {
             ))}
           </div>
           <div className="add-skill">
-            <input 
-              value={newLearn} 
-              onChange={e => setNewLearn(e.target.value)} 
-              placeholder="e.g. Python" 
-            />
+            <input value={newLearn} onChange={e => setNewLearn(e.target.value)} placeholder="e.g. Python" />
             <button className="btn-secondary" onClick={() => handleAddSkill('learn')}>Add</button>
           </div>
         </div>
 
         <div className="panel">
-          <h3>Requests Received ({requests.received.filter(r => r.status === 'pending').length})</h3>
+          <h3>Requests Received ({requests.received.length})</h3>
           {requests.received.length === 0 ? <p className="text-muted">No requests.</p> : null}
           {requests.received.map(r => (
-            <div key={r._id} className="request-item">
-              <div>
-                <p><strong>{r.sender?.name}</strong></p>
-                <p style={{fontSize:'0.8rem'}}>Status: {r.status}</p>
-              </div>
-              {r.status === 'pending' && (
-                <div className="request-actions">
-                  <button className="btn-success" onClick={() => replyRequest(r._id, 'accepted')}>✓</button>
-                  <button className="btn-danger" onClick={() => replyRequest(r._id, 'rejected')}>✕</button>
+            <div key={r._id} className="request-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                  <p><strong>{r.sender?.name}</strong></p>
+                  <p style={{fontSize:'0.8rem'}}>Status: <span className={`status-badge badge-${r.status}`}>{r.status}</span></p>
                 </div>
-              )}
+                {r.status === 'pending' && (
+                  <div className="request-actions">
+                    <button className="btn-success" title="Accept" onClick={() => replyRequest(r._id, 'accepted')}>✓</button>
+                    <button className="btn-danger" title="Reject" onClick={() => replyRequest(r._id, 'rejected')}>✕</button>
+                  </div>
+                )}
+              </div>
+              {r.status === 'accepted' && r.sender && <ContactCard person={r.sender} />}
             </div>
           ))}
         </div>
@@ -186,11 +201,17 @@ function Dashboard({ user, onUpdateUser }) {
           <h3>Requests Sent ({requests.sent.length})</h3>
           {requests.sent.length === 0 ? <p className="text-muted">No requests sent.</p> : null}
           {requests.sent.map(r => (
-            <div key={r._id} className="request-item">
-              <div>
-                <p>To: <strong>{r.receiver?.name}</strong></p>
-                <p style={{fontSize:'0.8rem'}}>Status: {r.status}</p>
+            <div key={r._id} className="request-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p>To: <strong>{r.receiver?.name}</strong></p>
+                  <p style={{fontSize:'0.8rem'}}>Status: <span className={`status-badge badge-${r.status}`}>{r.status}</span></p>
+                </div>
+                {(r.status === 'pending' || r.status === 'rejected') && (
+                  <button className="btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }} onClick={() => cancelRequest(r._id)}>Cancel</button>
+                )}
               </div>
+              {r.status === 'accepted' && r.receiver && <ContactCard person={r.receiver} />}
             </div>
           ))}
         </div>
@@ -211,7 +232,7 @@ function Dashboard({ user, onUpdateUser }) {
           
           <div style={{marginTop:'1.5rem'}} className="users-grid">
             {filteredUsers.map(u => (
-              <div key={u._id} className="user-card">
+              <div key={u._id} className="user-card animate-fade-in">
                 <h4>{u.name}</h4>
                 
                 <div className="user-section">
